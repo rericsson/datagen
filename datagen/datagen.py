@@ -49,12 +49,12 @@ class DataColumnDictionary(DataColumn):
 
 class DataColumnInteger(DataColumn):
 
-    def __init__(self, name: str, lowValue: int = 0, highValue: int = 0):
-        if lowValue > highValue:
+    def __init__(self, name: str, low_value: int = 0, high_value: int = 0):
+        if low_value > high_value:
             raise ValueError
         super().__init__(name)
-        self.low = lowValue
-        self.high = highValue
+        self.low = low_value
+        self.high = high_value
 
     def value(self):
         return randrange(self.low, self.high)
@@ -89,12 +89,12 @@ class DataColumnIntegerDelta(DataColumn):
 
 class DataColumnDate(DataColumn):
 
-    def __init__(self, name: str, lowValue: date, highValue: date):
-        if lowValue > highValue:
+    def __init__(self, name: str, low_value: date, high_value: date):
+        if low_value > high_value:
             raise ValueError
         super().__init__(name)
-        self.low = lowValue
-        self.high = highValue
+        self.low = low_value
+        self.high = high_value
 
     def value(self):
         time_between_dates = self.high - self.low
