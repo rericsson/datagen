@@ -57,6 +57,11 @@ class DataColumnDate(DataColumn):
         random_date = self.low + timedelta(days=random_number_days)
         return random_date
 
+#increasing dates with some variance on number of rows
+#lat, long in two seperate related columns
+#increasing numbers for work orders
+#types with lookup texts
+#numbers/dates based on previous number with some variance
 
 
 def create_file(directory: str, filename: str, worksheet: str, columns: List[DataColumn], rows: int):
@@ -90,6 +95,7 @@ def create_file(directory: str, filename: str, worksheet: str, columns: List[Dat
 @click.command()
 @click.option('--rows', default=1, help="Number of rows")
 @click.option('--filename', default="datagen.xlsx")
+@click.option('--directory', default='.')
 def datagen(filename, rows):
     """Create a xlsx file with fake data"""
     projects = [ "Project1", "Project2", "Project3" ]
@@ -104,7 +110,7 @@ def datagen(filename, rows):
                 DataColumnInteger("Cost", 1000, 5000),
                 DataColumnDate("Start", early_date, late_date)
             ]
-    create_file(".", filename,"Data", columns, rows)
+    create_file(directory, filename,"Data", columns, rows)
 
 
 if __name__ == "__main__":
