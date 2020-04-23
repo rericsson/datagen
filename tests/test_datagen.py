@@ -16,28 +16,36 @@ def test_file_create(tmpdir):
     filename = "test.xlsx"
     filepath = f"{tmpdir}/{filename}"
     worksheet = "Data"
+    # number of data rows
+    rows = 5
     # some test data
     projects = [ "Project1", "Project2", "Project3" ]
     sites = ["Site1", "Site2", "Site3"]
+    priority_values = ["1", "2", "3", "4"]
+    priority_dictionary = { "1": "Emergency", "2": "High", "3": "Medium", "4": "Low" }
     early_date = datetime.date(2020, 1, 1)
-    late_date = datetime.date(2020, 4, 21)
+    late_date = datetime.date(2020, 1, 4)
     columns = [
                 DataColumnList("Project", projects),
                 DataColumnList("Site", sites),
-                DataColumn("WBS", previous=2),
+                DataColumnCombine("WBS", previous=2, delimiter="."),
                 DataColumn("Description"),
-                DataColumnInteger("Cost", 1000, 5000),
-                DataColumnDate("Start", early_date, late_date)
+                DataColumnInteger("Estimated", 1000, 5000),
+                DataColumnIntegerDelta("Actual", 25),
+                DataColumnDate("Start", early_date, late_date),
+                DataColumnDateDelta("Finish", 5),
+                DataColumnList("Priority", priority_values),
+                DataColumnDictionary("Priority Text", priority_dictionary),
+                DataColumnDateIncreasing("Date", early_date, 5), # 5 rows per day
+                DataColumnIntegerIncreasing("Order", 400000)
             ]
-    # number of data rows
-    rows = 4
     # create a file as specified
     create_file(tmpdir, filename, worksheet, columns, rows)
     assert path.exists(filepath)
     wb = load_workbook(filename=filepath)
     sheet_range = wb[worksheet]
     # check the values in the sheet
-    values = zip("ABCDEF", columns)
+    values = zip("ABCDEFGHIJKL", columns)
     for col, val in values:
         for row in range(1, rows + 1):
             colrow = f"{col}{row}"
@@ -52,12 +60,31 @@ def test_file_create(tmpdir):
                     assert sheet_range[colrow].value in sites
                 elif col == "C":
                     assert sheet_range[colrow].value == \
-                        sheet_range[f"A{row}"].value + sheet_range[f"B{row}"].value
+                        sheet_range[f"A{row}"].value + "." + sheet_range[f"B{row}"].value
                 elif col in "CD":
                     assert sheet_range[colrow].value in val.value()
                 elif col == "E":
                     assert isinstance(sheet_range[colrow].value, int)
                 elif col == "F":
+                    current_val = sheet_range[colrow].value
+                    previous_val = sheet_range[f"E{row}"].value
+                    assert 750 <= current_val <= 6250
+                elif col == "G":
                     date_val = xldate_to_datetime(sheet_range[colrow].value)
                     assert date_val >= early_date
                     assert date_val <= late_date
+                elif col == "H":
+                    date_val = xldate_to_datetime(sheet_range[colrow].value)
+                    assert date_val >= early_date
+                elif col == "I":
+                    assert sheet_range[colrow].value in priority_values
+                elif col == "J":
+                    priority_key = sheet_range[f"I{row}"].value
+                    assert sheet_range[colrow].value == priority_dictionary[priority_key]
+                elif col == "K":
+                    date_val = xldate_to_datetime(sheet_range[colrow].value)
+                    assert date_val >= early_date
+                    assert date_val <= late_date
+                elif col == "M":
+                    assert isinstance(sheet_range[colrow].value, int)
+

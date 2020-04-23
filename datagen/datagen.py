@@ -1,15 +1,14 @@
 import click
 from datetime import date, timedelta
 from random import choice, randrange
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import xlsxwriter
 
 
 class DataColumn:
 
-    def __init__(self, name: str, previous=0):
+    def __init__(self, name: str):
         self.name = name
-        self.previous = previous
 
     def header(self):
         return self.name
@@ -17,8 +16,17 @@ class DataColumn:
     def value(self):
         return self.name
 
+
+class DataColumnCombine(DataColumn):
+
+    def __init__(self, name: str, previous=0, delimiter=""):
+        super().__init__(name)
+        self.previous = previous
+        self.delimiter = delimiter
+
     def previous(self):
         return self.previous
+
 
 class DataColumnList(DataColumn):
 
@@ -28,6 +36,16 @@ class DataColumnList(DataColumn):
 
     def value(self):
         return choice(self.values)
+
+class DataColumnDictionary(DataColumn):
+
+    def __init__(self, name: str, values: Dict):
+        super().__init__(name)
+        self.values = values
+
+    def value(self, key_value: str):
+        return self.values[key_value]
+
 
 class DataColumnInteger(DataColumn):
 
@@ -40,6 +58,34 @@ class DataColumnInteger(DataColumn):
 
     def value(self):
         return randrange(self.low, self.high)
+
+class DataColumnIntegerIncreasing(DataColumn):
+
+    def __init__(self, name: str, start: int = 0):
+        super().__init__(name)
+        self.start = start
+        self.last = 0
+
+    def value(self):
+        if self.last == 0:
+            self.last = self.start
+        else:
+            self.last += 1
+        return self.last
+
+class DataColumnIntegerDelta(DataColumn):
+
+    def __init__(self, name: str, delta: int):
+        if delta < 0:
+            raise ValueError
+        super().__init__(name)
+        self.delta = delta
+
+    def value(self, last_value: int):
+        high_value = int(last_value + (self.delta/100 * last_value))
+        low_value = int(last_value - (self.delta/100 * last_value))
+        return randrange(low_value, high_value)
+
 
 class DataColumnDate(DataColumn):
 
@@ -57,17 +103,43 @@ class DataColumnDate(DataColumn):
         random_date = self.low + timedelta(days=random_number_days)
         return random_date
 
-#increasing dates with some variance on number of rows
-#lat, long in two seperate related columns
-#increasing numbers for work orders
-#types with lookup texts
-#numbers/dates based on previous number with some variance
+class DataColumnDateDelta(DataColumn):
 
+    def __init__(self, name: str, delta: int):
+        if delta < 0:
+            raise ValueError
+        super().__init__(name)
+        self.delta = delta
+
+    def value(self, last_value: date):
+        random_days = timedelta(days=randrange(self.delta))
+        return last_value + random_days
+
+class DataColumnDateIncreasing(DataColumn):
+
+    def __init__(self, name: str, start: date, rows_per_day: int):
+        if rows_per_day <= 0:
+            raise ValueError
+        super().__init__(name)
+        self.start = start
+        self.rows_per_day = rows_per_day
+        self.last_date = 0
+        self.last_row = 0
+
+    def value(self):
+        self.last_row += 1
+        if isinstance(self.last_date, date):
+            if self.last_row % self.rows_per_day == 0:
+                self.last_date += timedelta(days=1)
+        else:
+            self.last_date = self.start
+        return self.last_date
 
 def create_file(directory: str, filename: str, worksheet: str, columns: List[DataColumn], rows: int):
     """ create an xslx file """
     book = xlsxwriter.Workbook(f"{directory}/{filename}")
     sheet = book.add_worksheet(worksheet)
+    # create a list to store the data before it is written to the sheet
     data = []
     # write the columns to the spreadsheet
     for col, datacol in enumerate(columns):
@@ -79,10 +151,17 @@ def create_file(directory: str, filename: str, worksheet: str, columns: List[Dat
                 # if we are combining previous columns, need to start
                 # at the corresponding value for the previous row
                 # and step through by the number of rows
-                if (datacol.previous > 0):
+                if isinstance(datacol, DataColumnCombine):
                     start = -(rows * datacol.previous)
                     step = rows
-                    data.append("".join(data[start::step]))
+                    delim = datacol.delimiter
+                    data.append(delim.join(data[start::step]))
+                # if we are using a delta, get the last value and apply delta
+                elif isinstance(datacol,
+                        (DataColumnIntegerDelta, DataColumnDateDelta, DataColumnDictionary)):
+                    last_value = data[-rows]
+                    current_value = datacol.value(last_value)
+                    data.append(current_value)
                 else:
                     data.append(datacol.value())
                 # write the data to the sheet being careful with dates
@@ -96,21 +175,32 @@ def create_file(directory: str, filename: str, worksheet: str, columns: List[Dat
 @click.option('--rows', default=1, help="Number of rows")
 @click.option('--filename', default="datagen.xlsx")
 @click.option('--directory', default='.')
-def datagen(filename, rows):
+def datagen(directory, filename, rows):
     """Create a xlsx file with fake data"""
     projects = [ "Project1", "Project2", "Project3" ]
     sites = ["Site1", "Site2", "Site3"]
+    priority_values = ["1", "2", "3", "4"]
+    priority_dictionary = { "1": "Emergency", "2": "High", "3": "Medium", "4": "Low" }
+    lat_values = ["37.778549194336", "37.77717590332", "37.780332"]
+    lat_dictionary = {"37.778549194336": "-122.42134094238","37.77717590332": "-122.4227142334","37.780332": "-122.418898" }
     early_date = date(2020, 1, 1)
-    late_date = date(2020, 4, 21)
+    late_date = date(2020, 1, 8)
     columns = [
+                DataColumnIntegerIncreasing("Order", 40000),
                 DataColumnList("Project", projects),
                 DataColumnList("Site", sites),
-                DataColumn("WBS", previous=2),
+                DataColumnCombine("WBS", previous=2, delimiter="."),
                 DataColumn("Description"),
-                DataColumnInteger("Cost", 1000, 5000),
-                DataColumnDate("Start", early_date, late_date)
+                DataColumnInteger("Estimated", 1000, 5000),
+                DataColumnIntegerDelta("Actual", 25),
+                DataColumnDateIncreasing("Start", early_date, 6),
+                DataColumnDateDelta("Finish", 5),
+                DataColumnList("Priority", priority_values),
+                DataColumnDictionary("Priority Text", priority_dictionary),
+                DataColumnList("Lat", lat_values),
+                DataColumnDictionary("Lon", lat_dictionary)
             ]
-    create_file(directory, filename,"Data", columns, rows)
+    create_file(directory, filename, "Data", columns, rows)
 
 
 if __name__ == "__main__":
