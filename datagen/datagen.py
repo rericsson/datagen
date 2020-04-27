@@ -1,8 +1,9 @@
 import click
+import yaml
+import xlsxwriter
 from datetime import date, timedelta
 from random import choice, randrange
 from typing import List, Tuple, Dict
-import xlsxwriter
 
 
 class DataColumn:
@@ -135,9 +136,11 @@ class DataColumnDateIncreasing(DataColumn):
             self.last_date = self.start
         return self.last_date
 
-def create_file(directory: str, filename: str, worksheet: str, columns: List[DataColumn], rows: int):
+def create_file(filename: str, worksheet: str, columns: List[DataColumn], rows: int):
     """ create an xslx file """
-    book = xlsxwriter.Workbook(f"{directory}/{filename}")
+    if rows < 1:
+        raise ValueError("Number of rows to be generated must be 1 or more")
+    book = xlsxwriter.Workbook(filename)
     sheet = book.add_worksheet(worksheet)
     # create a list to store the data before it is written to the sheet
     data = []
@@ -171,37 +174,21 @@ def create_file(directory: str, filename: str, worksheet: str, columns: List[Dat
                     sheet.write(row, col, data[-1])
     book.close()
 
-@click.command()
-@click.option('--rows', default=1, help="Number of rows")
-@click.option('--filename', default="datagen.xlsx")
-@click.option('--directory', default='.')
-def datagen(directory, filename, rows):
-    """Create a xlsx file with fake data"""
-    projects = [ "Project1", "Project2", "Project3" ]
-    sites = ["Site1", "Site2", "Site3"]
-    priority_values = ["1", "2", "3", "4"]
-    priority_dictionary = { "1": "Emergency", "2": "High", "3": "Medium", "4": "Low" }
-    lat_values = ["37.778549194336", "37.77717590332", "37.780332"]
-    lat_dictionary = {"37.778549194336": "-122.42134094238","37.77717590332": "-122.4227142334","37.780332": "-122.418898" }
-    early_date = date(2020, 1, 1)
-    late_date = date(2020, 1, 8)
-    columns = [
-                DataColumnIntegerIncreasing("Order", 40000),
-                DataColumnList("Project", projects),
-                DataColumnList("Site", sites),
-                DataColumnCombine("WBS", previous=2, delimiter="."),
-                DataColumn("Description"),
-                DataColumnInteger("Estimated", 1000, 5000),
-                DataColumnIntegerDelta("Actual", 25),
-                DataColumnDateIncreasing("Start", early_date, 6),
-                DataColumnDateDelta("Finish", 5),
-                DataColumnList("Priority", priority_values),
-                DataColumnDictionary("Priority Text", priority_dictionary),
-                DataColumnList("Lat", lat_values),
-                DataColumnDictionary("Lon", lat_dictionary)
-            ]
-    create_file(directory, filename, "Data", columns, rows)
 
+@click.command(help="Generate data in an xlsx format following a defined configuration")
+@click.option("--rows", default=1, type=int, help="Number of rows to generate")
+@click.option("--filename", default="datagen.xlsx", help="Output filename. datagen.xlsx by default")
+@click.option("--config", default="config.yaml", help="Configuration file. config.yaml by default")
+def datagen(filename, rows, config):
+
+    try:
+        stream = open(config, "r")
+        columns = yaml.full_load(stream)
+        create_file(filename, "Data", columns, rows)
+    except yaml.constructor.ConstructorError as err:
+        print(f"The configuration has an incorrect specification: {format(err)}")
+    except (FileNotFoundError, UnboundLocalError, ValueError, xlsxwriter.exceptions.FileCreateError) as err:
+        print(f"Error: {format(err)}")
 
 if __name__ == "__main__":
     datagen()

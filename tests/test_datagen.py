@@ -40,7 +40,7 @@ def test_file_create(tmpdir):
                 DataColumnIntegerIncreasing("Order", 400000)
             ]
     # create a file as specified
-    create_file(tmpdir, filename, worksheet, columns, rows)
+    create_file(filepath, worksheet, columns, rows)
     assert path.exists(filepath)
     wb = load_workbook(filename=filepath)
     sheet_range = wb[worksheet]
