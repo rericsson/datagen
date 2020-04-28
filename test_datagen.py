@@ -3,7 +3,7 @@ import datetime
 from os import path
 from openpyxl import load_workbook
 
-from datagen.datagen import *
+from datagen import *
 
 def xldate_to_datetime(xldate):
     """ convert Excel dates to Python dates """
