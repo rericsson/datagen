@@ -124,3 +124,5 @@ The configuration determines the columns created and their type. It is done in y
 ```
 
 This shows all of the different types of columns available and how they are used. Please note that some columns are dependent on the columns appearing before them. For example, the DataColumnIntegerDelta must appear after an integer column and will create a value that is +/- the delta percentage from the previous column. The DataColumnDateDelta column is similar. The DataColumnDictionary looks up a value from the given dictionary from the previous DataColumnList value. 
+
+To add new columns, just add a new `!!python/object` to the list of columns. If you delete a `!!python/object` entry in the configuration file, the correspoding column will no longer appear in the output.
