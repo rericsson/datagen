@@ -58,7 +58,7 @@ The configuration determines the columns created and their type. It is done in y
 
 ```
 - !!python/object:__main__.DataColumnIntegerIncreasing
-  last: 40098
+  last: 0
   name: Order
   start: 40000
 - !!python/object:__main__.DataColumnList
@@ -87,8 +87,8 @@ The configuration determines the columns created and their type. It is done in y
   delta: 25
   name: Actual
 - !!python/object:__main__.DataColumnDateIncreasing
-  last_date: 2020-01-17
-  last_row: 99
+  last_date: 0
+  last_row: 0
   name: Start
   rows_per_day: 6
   start: 2020-01-01
@@ -125,4 +125,6 @@ The configuration determines the columns created and their type. It is done in y
 
 This shows all of the different types of columns available and how they are used. Please note that some columns are dependent on the columns appearing before them. For example, the DataColumnIntegerDelta must appear after an integer column and will create a value that is +/- the delta percentage from the previous column. The DataColumnDateDelta column is similar. The DataColumnDictionary looks up a value from the given dictionary from the previous DataColumnList value. 
 
-To add new columns, just add a new `!!python/object` to the list of columns. If you delete a `!!python/object` entry in the configuration file, the correspoding column will no longer appear in the output.
+To add new columns, just add a new `!!python/object` to the list of columns. If you delete a `!!python/object` entry in the configuration file, the correspoding column will no longer appear in the output. 
+
+Note that there are some values that are necessary for object initialization and should be set to 0. These are last in DataColumnIntegerIncreasing and last_date and last_row in DataColumnDateIncreasing. A future version will improve the object loader so that these values are not required. 

@@ -1,6 +1,6 @@
 - !!python/object:__main__.DataColumnIntegerIncreasing
-  last: 40098
   name: Order
+  last: 0
   start: 40000
 - !!python/object:__main__.DataColumnList
   name: Project
@@ -28,11 +28,11 @@
   delta: 25
   name: Actual
 - !!python/object:__main__.DataColumnDateIncreasing
-  last_date: 2020-01-17
-  last_row: 99
   name: Start
   rows_per_day: 6
   start: 2020-01-01
+  last_row: 0
+  last_date: 0
 - !!python/object:__main__.DataColumnDateDelta
   delta: 5
   name: Finish
